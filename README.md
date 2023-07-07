@@ -1,9 +1,8 @@
 # DownloaderBeatmapPack
-@TODO: write readme.md, and bugs or something idk.
+@TODO: write readme.md and errors or something idk.
 
+The application is in ALPHA version, so it may have many bugs and problems. In feature updates I will make better visual components and more editable stuff.
 
-App is in ALPHA so it can have so many bugs, and problems. In feature updates i will make better visual compontents and more editable things.
-
-With this app you easly download many beatmap packs from the osu site. 
+With this application, you can easily download many beatmap packages from the osu website.
 
 DOWNLOAD LINK: http://mateuszokruch.pl/downloads/obpd/obpd-setup.exe
