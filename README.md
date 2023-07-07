@@ -5,7 +5,7 @@ The application is in ALPHA version, so it may have many bugs and problems. In f
 
 With this application, you can easily download many beatmap packages from the osu website.
 
-DOWNLOAD LINK: [http://mateuszokruch.pl/downloads/obpd/obpd-setup.exe](http://mateuszokruch.pl/downloads/DownloaderBeatmapPack.zip)
+DOWNLOAD LINK: [VERSION 0.0.0.1](http://mateuszokruch.pl/downloads/DownloaderBeatmapPack.zip)
 
 
 
