@@ -41,4 +41,3 @@ What new:
 4. Click the "start" button.
 5. Optional click the "stop" button.
 DOWNLOAD LINK: [VERSION 0.0.0.1](http://mateuszokruch.pl/downloads/DownloaderBeatmapPack.zip)
-version 0.0.0.1
