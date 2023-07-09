@@ -1,17 +1,15 @@
-﻿using System;
+﻿using SharpCompress.Archives;
+using SharpCompress.Common;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Security.Policy;
-using System.Text;
+using System.IO.Compression;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using Image = System.Drawing.Image;
 
 namespace DownloaderBeatmapPack
 {
@@ -19,62 +17,119 @@ namespace DownloaderBeatmapPack
     {
         private readonly FileDownloader fileDownloader;
         private CancellationTokenSource cancellationTokenSource;
+
+        private Boolean isLimit = true;
+        private Boolean isExtract = false;
+        private Boolean isDelete = false;
         public Form1()
         {
             InitializeComponent();
+            getVersion();
             fileDownloader = new FileDownloader();
             cancellationTokenSource = new CancellationTokenSource();
             labelPath.Text = Properties.Settings.Default.pathToSave;
+            stopButton.Enabled = false;
             this.Text = "Osu Beatmap Downloader";
-            newLine("Set the path to save the files first! Settings > Save Path");
+            writeNewLine("Set the path to save the files first! Settings > Save Path");
         }
 
-        private void textBox1_TextChanged(object sender, EventArgs e)
-        {
-
-        }
         private async void downloadButton_Click(object sender, EventArgs e)
         {
             List<string> links = GenerateDownloadLinks();
 
             if (links.Count == 0)
             {
-                errorLine("No download links");
+                writeErrorLine("No download links");
                 labelStatus.Text = "Status: Error";
                 return;
             }
-            // Wyłączamy przycisk, aby uniknąć wielokrotnego klikania
             downloadButton.Enabled = false;
-            cancelButton.Enabled = true;
+            stopButton.Enabled = true;
 
             try
             {
-                progressBar1.Minimum = 0;
-                progressBar1.Maximum = links.Count;
-                progressBar1.Value = 0;
+                progressBarAll.Minimum = 0;
+                progressBarAll.Maximum = links.Count;
+                progressBarAll.Value = 0;
 
-                labelStatus.Text = "Status: Downloading...";
-                newLine("Download started");
+
+                writeNewLine("Download started");
                 for (int i = 0; i < links.Count; i++)
                 {
                     string link = links[i];
                     string fileName = GetFileNameFromUrl(link);
                     string destinationPath = GetDestinationPath(fileName);
-
-                    progressBar2.Minimum = 0;
-                    progressBar2.Maximum = 100;
-                    progressBar2.Value = 0;
+                    labelStatus.Text = "Status: Downloading : " + i + "/" + links.Count;
+                    labelProgressAll.Text = i + "/" + links.Count;
+                    progressBar.Minimum = 0;
+                    progressBar.Maximum = 100;
+                    progressBar.Value = 0;
 
                     await fileDownloader.DownloadFileAsync(link, destinationPath, cancellationTokenSource.Token, progress =>
                     {
-                        // Aktualizuj progressBar2 na podstawie postępu pobierania
-                        progressBar2.Invoke((MethodInvoker)(() =>
+                        progressBar.Invoke((MethodInvoker)(() =>
                         {
-                            progressBar2.Value = (int)(progress * 100);
+                            int progressPercentage = (int)(progress * 100);
+                            progressBar.Value = progressPercentage;
+                            labelProgress.Invoke((MethodInvoker)(() =>
+                            {
+                                labelProgress.Text = progressPercentage + "%";
+                            }));
                         }));
                     });
+                    progressBarAll.Value = i + 1;
+                    if (isExtract)
+                    {
+                        if (Path.GetExtension(destinationPath).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string extractPath = GetExtractPath(destinationPath);
+                            await Task.Run(() =>
+                            {
+                                ZipFile.ExtractToDirectory(destinationPath, extractPath);
+                            });
+                        }
+                        if (isExtract && Path.GetExtension(destinationPath).Equals(".7z", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string extractPath = GetExtractPath(destinationPath);
+                            if (!Directory.Exists(extractPath))
+                            {
+                                Directory.CreateDirectory(extractPath);
+                            }
+                            await Task.Run(() =>
+                            {
+                                using (var archive = ArchiveFactory.Open(destinationPath))
+                                {
+                                    foreach (var entry in archive.Entries)
+                                    {
+                                        if (!entry.IsDirectory)
+                                        {
+                                            entry.WriteToDirectory(extractPath, new ExtractionOptions() { ExtractFullPath = true, Overwrite = true });
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    if (isExtract && isDelete)
+                    {
+                        try
+                        {
 
-                    progressBar1.Value = i + 1;
+                            if (File.Exists(destinationPath))
+                            {
+                                File.Delete(destinationPath);
+                                writeNewLine("Plik został usunięty.");
+                            }
+                            else
+                            {
+                                writeNewLine("Plik nie istnieje.");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Wystąpił błąd podczas usuwania pliku: {ex.Message}");
+                        }
+                    }
 
 
                     if (cancellationTokenSource.IsCancellationRequested)
@@ -83,42 +138,57 @@ namespace DownloaderBeatmapPack
                     }
                 }
                 labelStatus.Text = "Status: Download complete";
-                newLine("The download is complete");
+                writeNewLine("The download is complete");
             }
             catch (Exception ex)
             {
                 labelStatus.Text = "Status: Error";
-                errorLine($"An error occurred while downloading the file: {ex.Message}");
+                writeErrorLine($"An error occurred while downloading the file: {ex.Message}");
             }
 
-            // Włączamy ponownie przycisk
             downloadButton.Enabled = true;
-            cancelButton.Enabled = false;
-            progressBar1.Value = 0;
+            stopButton.Enabled = false;
+            progressBarAll.Value = 0;
         }
 
         private void cancelButton_Click(object sender, EventArgs e)
         {
             cancellationTokenSource.Cancel();
-            errorLine("Download canceled");
+            writeErrorLine("Download canceled");
         }
 
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
         {
             if (numericUpDownFrom.Value > numericUpDownTo.Value)
             {
-                errorLine("Wrong value");
-                numericUpDownFrom.Value = numericUpDownTo.Value;
+                numericUpDownTo.Value = numericUpDownFrom.Value;
             }
+            if (isLimit)
+            {
+                if ((numericUpDownTo.Value - numericUpDownFrom.Value) > 200)
+                {
+                    numericUpDownTo.Value = numericUpDownFrom.Value + 200;
+                    writeErrorLine("Max limit links is 200! Click checkbox limit to: disabled for disable limits");
+                }
+            }
+
         }
 
         private void numericUpDown2_ValueChanged(object sender, EventArgs e)
         {
             if (numericUpDownFrom.Value > numericUpDownTo.Value)
             {
-                errorLine("Wrong value");
                 numericUpDownFrom.Value = numericUpDownTo.Value;
             }
+            if (isLimit)
+            {
+                if ((numericUpDownTo.Value - numericUpDownFrom.Value) > 200)
+                {
+                    numericUpDownFrom.Value = numericUpDownTo.Value - 200;
+                    writeErrorLine("Max limit links is 200! Click checkbox limit to: disabled for disable limits");
+                }
+            }
+
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -128,16 +198,16 @@ namespace DownloaderBeatmapPack
         private List<string> GenerateDownloadLinks()
         {
             labelStatus.Text = "Status: Generate request";
-            newLine("Link generation");
+            writeNewLine("Link generation");
             List<string> links = new List<string>();
-            int from = (int) numericUpDownFrom.Value;
-            int to = (int) numericUpDownTo.Value;
+            int from = (int)numericUpDownFrom.Value;
+            int to = (int)numericUpDownTo.Value;
             string formatFile = (from > 1299) ? ".zip" : ".7z";
 
             for (int i = from; i <= to; i++)
             {
                 string tempPath = $"https://packs.ppy.sh/S{i}%20-%20Beatmap%20Pack%20%23{i}{formatFile}";
-                newLine("Links generated: " + tempPath);
+                writeNewLine("Links generated: " + tempPath);
                 links.Add(tempPath);
             }
 
@@ -151,40 +221,27 @@ namespace DownloaderBeatmapPack
         }
         private string GetDestinationPath(string fileName)
         {
-            newLine("Save Path: "+ Properties.Settings.Default.pathToSave);
+            writeNewLine("Save Path: " + Properties.Settings.Default.pathToSave + "\\" + fileName);
             string destinationDirectory = Properties.Settings.Default.pathToSave;
             return Path.Combine(destinationDirectory, fileName);
         }
-        public void errorLine(string textError)
+        public void writeErrorLine(string textError)
         {
             DateTime currentTime = DateTime.Now;
             textBox.SelectionStart = textBox.TextLength;
             textBox.SelectionLength = 0;
             textBox.SelectionColor = Color.Red;
             textBox.AppendText("[" + currentTime + "] " + textError + Environment.NewLine);
-            textBox.SelectionColor = textBox.ForeColor; // Przywróć domyślny kolor tekstu
+            textBox.SelectionColor = textBox.ForeColor;
         }
-        public void newLine(string textLine)
+        public void writeNewLine(string textLine)
         {
             DateTime currentTime = DateTime.Now;
             textBox.AppendText("[" + currentTime + "] " + textLine + Environment.NewLine);
         }
-
         private void savePathToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            string folderPath = ShowFolderDialog();
-            if (!string.IsNullOrEmpty(folderPath))
-            {
-                Properties.Settings.Default.pathToSave = folderPath;
-                Properties.Settings.Default.Save();
-                string getPath = Properties.Settings.Default.pathToSave;
-                labelPath.Text = "Path Save: " + getPath;
-                Console.WriteLine("Selected location to save the file: " + getPath);
-            }
-            else
-            {
-                Console.WriteLine("No path");
-            }
+
         }
         public static string ShowFolderDialog()
         {
@@ -201,20 +258,81 @@ namespace DownloaderBeatmapPack
             return null;
         }
 
-
+        public void getVersion()
+        {
+            toolStripMenuItemVersion.Text = "0.0.1.0";
+        }
+        private string GetExtractPath(string filePath)
+        {
+            string fileName = Path.GetFileNameWithoutExtension(filePath);
+            string directory = Path.GetDirectoryName(filePath);
+            string extractPath = Path.Combine(directory, "extracted_songs");
+            return extractPath;
+        }
         private void toolStripMenuItem2_Click(object sender, EventArgs e)
         {
-
+            string link = "http://mateuszokruch.pl";
+            Process.Start(link);
         }
-
-        private void textBox_TextChanged(object sender, EventArgs e)
+        private void limitToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
+            if (limitToolStripMenuItem.Checked == true)
+            {
+                DialogResult result = MessageBox.Show("Are you sure you want to do this? This is highly not recommended!", "Confirm", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    limitToolStripMenuItem.Checked = false;
+                    isLimit = false;
+
+                    numericUpDownFrom.Value = 1;
+                    numericUpDownTo.Value = 1;
+
+                    statusLimitLabel.Text = "Limit is disabled!";
+                    statusLimitLabel.ForeColor = Color.Red;
+                }
+            }
+            else
+            {
+                limitToolStripMenuItem.Checked = true;
+                isLimit = true;
+                numericUpDownFrom.Value = 1;
+                numericUpDownTo.Value = 1;
+
+                statusLimitLabel.Text = "Limit is enabled!";
+                statusLimitLabel.ForeColor = Color.Black;
+            }
         }
 
-        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        private void changePathButton_Click(object sender, EventArgs e)
         {
+            string folderPath = ShowFolderDialog();
+            if (!string.IsNullOrEmpty(folderPath))
+            {
+                Properties.Settings.Default.pathToSave = folderPath;
+                Properties.Settings.Default.Save();
+                string getPath = Properties.Settings.Default.pathToSave;
+                labelPath.Text = "Path Save: " + getPath;
+                Console.WriteLine("Selected location to save the file: " + getPath);
+            }
+            else
+            {
+                Console.WriteLine("No path");
+            }
+        }
 
+        private void extractFile_CheckedChanged(object sender, EventArgs e)
+        {
+            extractFileAndDeleteCheckbox.Checked = false;
+            isExtract = true;
+            isDelete = false;
+        }
+        private void extractFileAndDelete_CheckedChanged(object sender, EventArgs e)
+        {
+            extractFileCheckbox.Checked = false;
+            isExtract = true;
+            isDelete = true;
         }
     }
 }

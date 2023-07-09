@@ -15,7 +15,6 @@ public class FileDownloader
 
     public async Task DownloadFileAsync(string url, string destinationPath, CancellationToken cancellationToken, Action<double> progressCallback)
     {
-        // Pobieranie zawartości pliku asynchronicznie
         using (HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
         {
             response.EnsureSuccessStatusCode();
@@ -34,14 +33,12 @@ public class FileDownloader
                         fileStream.Write(buffer, 0, bytesRead);
                         downloadedBytes += bytesRead;
 
-                        // Raportowanie postępu pobierania
                         if (totalBytes > 0 && progressCallback != null)
                         {
                             double progress = (double)downloadedBytes / totalBytes;
                             progressCallback.Invoke(progress);
                         }
 
-                        // Sprawdzanie, czy pobieranie zostało anulowane
                         cancellationToken.ThrowIfCancellationRequested();
                     }
                 }
