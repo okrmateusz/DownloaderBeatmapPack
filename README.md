@@ -5,9 +5,24 @@ The application is in ALPHA version, so it may have many bugs and problems. In f
 
 With this application, you can easily download many beatmap packages from the osu website.
 
-DOWNLOAD LINK: [VERSION 0.0.0.1](http://mateuszokruch.pl/downloads/DownloaderBeatmapPack.zip)
+DOWNLOAD LINK: [VERSION 0.0.1.0](http://mateuszokruch.pl/downloads/0.0.1.0-beta.zip)
 
 
+#Newest Version 0.0.1.0
+What new:
+- Removed limit path from Settings > limit path
+- The ability to disable the package download limit via Settings > Limit > Yes has been introduced
+- Added information whether the limit is active.
+- Added Change Path Button
+- Added the ability to unpack files after downloading.
+- Added option to delete files
+- Added osu!standard, osu!mania, osu!taiko, osu!catch checkboxes. Not active yet.
+- A new update reminder has been introduced.
+- The path version > (actual version) takes you to the website where you can download updates.
+- A number has been added that shows how many packages have been downloaded
+- Cosmetically improved code.
+- Add installer
+![image](https://github.com/okrmateusz/DownloaderBeatmapPack/assets/39056163/29c69824-0b09-489f-9334-76c25135fd70)
 
 
 
@@ -23,5 +38,5 @@ DOWNLOAD LINK: [VERSION 0.0.0.1](http://mateuszokruch.pl/downloads/DownloaderBea
 3. Change value of numericNumUpDown "to"
 4. Click the "start" button.
 5. Optional click the "stop" button.
-
+DOWNLOAD LINK: [VERSION 0.0.0.1](http://mateuszokruch.pl/downloads/DownloaderBeatmapPack.zip)
 version 0.0.0.1
