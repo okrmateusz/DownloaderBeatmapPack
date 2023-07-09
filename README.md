@@ -22,6 +22,8 @@ What new:
 - A number has been added that shows how many packages have been downloaded
 - Cosmetically improved code.
 - Add installer
+
+
 ![image](https://github.com/okrmateusz/DownloaderBeatmapPack/assets/39056163/29c69824-0b09-489f-9334-76c25135fd70)
 
 
